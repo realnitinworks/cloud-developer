@@ -10,20 +10,37 @@ exports.handler = async (event) => {
   console.log('Processing event: ', event)
 
   // TODO: Read and parse "limit" and "nextKey" parameters from query parameters
-  // let nextKey // Next key to continue scan operation if necessary
-  // let limit // Maximum number of elements to return
+  let nextKey; // Next key to continue scan operation if necessary
+  let limit; // Maximum number of elements to return
 
   // HINT: You might find the following method useful to get an incoming parameter value
-  // getQueryParameter(event, 'param')
+  // getQueryParameter(event, 'param') 
 
   // TODO: Return 400 error if parameters are invalid
+
+  try {
+    limit = parseLimitParam(event);
+    nextKey = parseNextKeyParam(event);
+  }
+  catch(e) {
+    return {
+      statusCode: 400,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        error: "Invalid parameter"
+      })
+    }
+  }
+  
 
   // Scan operation parameters
   const scanParams = {
     TableName: groupsTable,
     // TODO: Set correct pagination parameters
-    // Limit: ???,
-    // ExclusiveStartKey: ???
+    Limit: limit,
+    ExclusiveStartKey: nextKey
   }
   console.log('Scan params: ', scanParams)
 
@@ -37,7 +54,8 @@ exports.handler = async (event) => {
   return {
     statusCode: 200,
     headers: {
-      'Access-Control-Allow-Origin': '*'
+      'Access-Control-Allow-Origin': '*',
+      'Content-Type': "application/json",
     },
     body: JSON.stringify({
       items,
@@ -77,4 +95,27 @@ function encodeNextKey(lastEvaluatedKey) {
   }
 
   return encodeURIComponent(JSON.stringify(lastEvaluatedKey))
+}
+
+function parseLimitParam(event) {
+  let limit = getQueryParameter(event, "limit");
+  if(!limit) {
+    return undefined;
+  }
+
+  limit = parseInt(limit, 10);
+  if (limit <= 0) {
+    throw new Error("Limit must be positive");
+  }
+
+  return limit;
+}
+
+function parseNextKeyParam(event) {
+  let nextKey = getQueryParameter(event, "nextKey");
+  if (!nextKey) {
+    return undefined;
+  }
+
+  return JSON.parse(decodeURIComponent(nextKey));
 }
