@@ -1,6 +1,7 @@
 import { APIGatewayProxyHandler, APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import 'source-map-support/register'
 import * as AWS from 'aws-sdk'
+import * as uuid from 'uuid'
 
 const docClient = new AWS.DynamoDB.DocumentClient()
 
@@ -27,15 +28,28 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         }
     }
 
-    const images = await getImagePerGroup(groupId);
+    const imageId = uuid.v4();
+    const timestamp = (new Date()).toJSON();  // toISOString() instead
+    const parsedBody = JSON.parse(event.body);
+    const newImage = {
+        groupId: groupId,
+        imageId: imageId,
+        timestamp: timestamp,
+        ...parsedBody
+    }
 
+    await docClient.put({
+        TableName: imagesTable,
+        Item: newImage
+    }).promise()
+    
     return {
-        statusCode: 200,
+        statusCode: 201,
         headers: {
             'Access-Control-Allow-Origin': '*'
         },
         body: JSON.stringify({
-            items: images
+            newItem: newImage
         })
     }
 }
@@ -50,17 +64,4 @@ async function groupExists(groupId: string) {
 
     console.log('Get Group: ', result);
     return !!result.Item
-}
-
-async function getImagePerGroup(groupId: string) {
-    const result = await docClient.query({
-        TableName: imagesTable,
-        KeyConditionExpression: 'groupId = :groupId',
-        ExpressionAttributeValues: {
-            ':groupId': groupId
-        },
-        ScanIndexForward: false
-    }).promise()
-
-    return result.Items
 }
