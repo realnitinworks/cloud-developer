@@ -109,6 +109,11 @@ functions:
               application/json: ${file(models/create-image-model.json)}
 
   SendUploadNotifications:
+    environment:
+      STAGE: ${self:provider.stage}
+      REGION: ${self:provider.region}
+      API_ID:
+        Ref: WebsocketsApi
     handler: src/lambda/s3/sendNotifications.handler
     events:
       - s3:
