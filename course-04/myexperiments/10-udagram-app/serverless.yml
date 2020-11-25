@@ -101,6 +101,14 @@ functions:
             schema:
               application/json: ${file(models/create-image-model.json)}
 
+  SendUploadNotifications:
+    handler: src/lambda/s3/sendNotifications.handler
+    events:
+      - s3:
+          bucket: ${self:provider.environment.IMAGES_S3_BUCKET}
+          event: s3:ObjectCreated:*
+          existing: true
+
 resources:
   Resources:
     GroupsDynamoDBTable:
