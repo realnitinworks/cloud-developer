@@ -1,5 +1,15 @@
 import { DynamoDBStreamEvent, DynamoDBStreamHandler } from 'aws-lambda'
 import 'source-map-support/register'
+import * as elastisearch from 'elasticsearch'
+import * as httpAwsEs from 'http-aws-es'
+
+
+const esHost = process.env.ES_ENDPOINT
+
+const es = new elastisearch.Client({
+    hosts: [ esHost ],
+    connectionClass: httpAwsEs
+});
 
 
 export const handler: DynamoDBStreamHandler = async (event: DynamoDBStreamEvent) => {
@@ -7,5 +17,31 @@ export const handler: DynamoDBStreamHandler = async (event: DynamoDBStreamEvent)
 
     for (const record of event.Records) {
         console.log("Processing record", JSON.stringify(record));
+
+        if (record.eventName !== 'INSERT') {
+            continue;
+        }
+
+        // Get record from DynamoDB stream
+        const newItem = record.dynamodb.NewImage
+
+        const imageId = newItem.imageId.S
+
+        // Document to be syned to ElasticSearch
+        const body = {
+            imageId: newItem.imageId.S,
+            groupId: newItem.groupId.S,
+            imageUrl: newItem.imageUrl.S,
+            title: newItem.title.S,
+            timestamp: newItem.timestamp.S
+        }
+
+        // Sync to ElasticSearch
+        await es.index({
+            index: 'images-index',
+            type: 'images',
+            id: imageId, // Document ID
+            body // Document to store
+        })
     }
 }
