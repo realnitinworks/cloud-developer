@@ -8,6 +8,7 @@ custom:
   webpack:
     webpackConfig: ./webpack.config.js
     includeModules: true
+  topicName: imagesTopic-${self:provider.stage}
 
 # Add the serverless-webpack plugin
 plugins:
@@ -60,6 +61,7 @@ provider:
         - dynamodb:PutItem
         - dynamodb:DeleteItem
       Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.CONNECTIONS_TABLE}
+
 
 functions:
   GetGroups:
@@ -116,10 +118,15 @@ functions:
         Ref: WebsocketsApi
     handler: src/lambda/s3/sendNotifications.handler
     events:
-      - s3:
-          bucket: ${self:provider.environment.IMAGES_S3_BUCKET}
-          event: s3:ObjectCreated:*
-          existing: true
+      - sns:
+          arn:
+            Fn::Join:
+              - ':'
+              - - arn:aws:sns
+                - Ref: AWS::Region
+                - Ref: AWS::AccountId
+                - ${self:custom.topicName}
+          topicName: ${self:custom.topicName}
 
   ConnectHandler:
     handler: src/lambda/websocket/connect.handler
@@ -185,8 +192,13 @@ resources:
     
     AttachmentsBucket:
       Type: AWS::S3::Bucket
+      DependsOn: SNSTopicPolicy
       Properties:
         BucketName: ${self:provider.environment.IMAGES_S3_BUCKET}
+        NotificationConfiguration:
+          TopicConfigurations:
+            - Event: s3:ObjectCreated:Put
+              Topic: !Ref ImagesTopic
         CorsConfiguration:
           CorsRules:
             - AllowedOrigins:
@@ -250,5 +262,31 @@ resources:
                 AWS: 'arn:aws:iam::018367755822:user/udagram-nitin-dev'
               Action: 'es:*'
               Resource: '*'
+    
+    ImagesTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        DisplayName: Image bucket topic
+        TopicName: ${self:custom.topicName}
+
+    SNSTopicPolicy:
+      Type: AWS::SNS::TopicPolicy
+      Properties:
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                AWS: "*"
+              Action: sns:Publish
+              Resource:
+                !Ref ImagesTopic
+              Condition:
+                ArnLike:
+                  AWS:SourceArn: arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}
+        Topics:
+          - !Ref ImagesTopic
+
+      
         
 
