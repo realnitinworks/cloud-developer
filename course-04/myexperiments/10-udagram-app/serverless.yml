@@ -84,6 +84,7 @@ functions:
           method: post
           path: groups
           cors: true
+          authorizer: Auth
           request:
             schema:
               application/json: ${file(models/create-group-model.json)}
@@ -111,6 +112,7 @@ functions:
           method: post
           path: groups/{groupId}/images
           cors: true
+          authorizer: Auth
           request:
             schema:
               application/json: ${file(models/create-image-model.json)}
@@ -171,8 +173,22 @@ functions:
           type: dynamodb
           arn: !GetAtt ImagesDynamoDBTable.StreamArn
 
+  Auth:
+    handler: src/lambda/auth/auth0Authorizer.handler
+
 resources:
-  Resources:
+  Resources:    
+    GatewayResponseDefault4XX:  # Required to satisfy CORS if Authorization is not granted
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,OPTIONS,POST'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: ApiGatewayRestApi
+
     GroupsDynamoDBTable:
       Type: AWS::DynamoDB::Table
       Properties:
