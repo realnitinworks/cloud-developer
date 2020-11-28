@@ -32,8 +32,8 @@ provider:
     IMAGES_S3_BUCKET: serverless-nitin-udagram-images-${self:provider.stage}
     RESIZED_IMAGES_S3_BUCKET: serverless-nitin-udagram-resize-images-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
-    AUTH_0_SECRET_ID: Auth0Secret-${self:provider.stage}
-    AUTH_0_SECRET_FIELD: auth0Secret
+    AUTH_0_SECRET_ID: Auth0Secret-${self:provider.stage}  # Resource is created with name in AWS
+    AUTH_0_SECRET_FIELD: auth0Secret  # Used as the key to extract a secret in the Resource
 
   # For Lambda function permissions to talk to the AWS resources
   iamRoleStatements:
