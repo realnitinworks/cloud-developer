@@ -32,6 +32,7 @@ provider:
     IMAGES_S3_BUCKET: serverless-nitin-udagram-images-${self:provider.stage}
     RESIZED_IMAGES_S3_BUCKET: serverless-nitin-udagram-resize-images-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
+    AUTH_0_SECRET: HardToGuess
 
   # For Lambda function permissions to talk to the AWS resources
   iamRoleStatements:
