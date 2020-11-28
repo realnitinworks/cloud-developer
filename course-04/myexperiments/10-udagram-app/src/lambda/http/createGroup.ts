@@ -2,6 +2,7 @@ import { APIGatewayProxyHandler, APIGatewayProxyEvent, APIGatewayProxyResult } f
 import 'source-map-support/register'
 import * as AWS from 'aws-sdk'
 import * as uuid from 'uuid'
+import { getUserId } from '../../auth/utils'
 
 const docClient = new AWS.DynamoDB.DocumentClient()
 
@@ -13,9 +14,12 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     const itemId = uuid.v4()
 
     const parsedBody = JSON.parse(event.body)
+    const jwtToken = getToken(event); // encoded JWT Token in header
+    const userId = getUserId(jwtToken); // .sub from decoded JWT Token
 
     const newItem = {
         id: itemId,
+        userId,
         ...parsedBody
     }
 
@@ -33,4 +37,11 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
             newItem
         })
     }
+}
+
+
+function getToken(event: APIGatewayProxyEvent) {
+    const authorization = event.headers.Authorization;
+    const jwtToken = authorization.split(' ')[1];
+    return jwtToken;
 }
