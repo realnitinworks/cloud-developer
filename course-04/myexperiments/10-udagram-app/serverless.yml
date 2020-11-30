@@ -13,6 +13,7 @@ custom:
 # Add the serverless-webpack plugin
 plugins:
   - serverless-webpack
+  - serverless-plugin-canary-deployments
 
 provider:
   name: aws
@@ -34,6 +35,11 @@ provider:
     SIGNED_URL_EXPIRATION: 300
     AUTH_0_SECRET_ID: Auth0Secret-${self:provider.stage}  # Resource is created with name in AWS
     AUTH_0_SECRET_FIELD: auth0Secret  # Used as the key to extract a secret in the Resource
+
+  tracing:
+    lambda: true
+    apiGateway: true 
+  
 
   # For Lambda function permissions to talk to the AWS resources
   iamRoleStatements:
@@ -76,6 +82,11 @@ provider:
       Action:
         - kms:Decrypt
       Resource: !GetAtt KMSKey.Arn
+    - Effect: Allow
+      Action:
+        - codedeploy:*
+      Resource:
+        - '*'
 
 
 functions:
@@ -98,6 +109,9 @@ functions:
           request:
             schema:
               application/json: ${file(models/create-group-model.json)}
+    deploymentSettings:
+      type: Linear10PercentEvery1Minute
+      alias: Live
               
   GetImages:
     handler: src/lambda/http/getImages.handler
